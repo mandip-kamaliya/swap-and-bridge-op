@@ -12,11 +12,7 @@ import {TransientStateLibrary} from "v4-core/libraries/TransientStateLibrary.sol
 import {SwapParams} from "v4-core/types/PoolOperation.sol";
 
 interface IL1StandardBridge {
-    function depositETHTo(
-        address _to,
-        uint32 _minGasLimit,
-        bytes calldata _extraData
-    ) external payable;
+    function depositETHTo(address _to, uint32 _minGasLimit, bytes calldata _extraData) external payable;
     function depositERC20To(
         address _l1Token,
         address _l2Token,
@@ -26,6 +22,7 @@ interface IL1StandardBridge {
         bytes calldata _extraData
     ) external;
 }
+
 contract SwapAndBridgeOptimismRouter is Ownable {
     using CurrencyLibrary for Currency;
     using CurrencySettler for Currency;
@@ -34,11 +31,22 @@ contract SwapAndBridgeOptimismRouter is Ownable {
     IPoolManager public immutable manager;
     IL1StandardBridge public immutable l1StandardBridge;
 
+    mapping(address l1Token => address l2Token) public l1ToL2TokenAddresses;
 
-  constructor(
-        IPoolManager _manager,
-        IL1StandardBridge _l1StandardBridge
-    ) Ownable(msg.sender) {
+    struct CallbackData {
+        address sender;
+        SwapSettings settings;
+        PoolKey key;
+        SwapParams params;
+        bytes hookData;
+    }
+
+    struct SwapSettings {
+        bool bridgeTokens;
+        address recipientAddress;
+    }
+
+    constructor(IPoolManager _manager, IL1StandardBridge _l1StandardBridge) Ownable(msg.sender) {
         manager = _manager;
         l1StandardBridge = _l1StandardBridge;
     }
