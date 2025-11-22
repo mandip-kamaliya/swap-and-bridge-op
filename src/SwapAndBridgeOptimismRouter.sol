@@ -26,3 +26,20 @@ interface IL1StandardBridge {
         bytes calldata _extraData
     ) external;
 }
+contract SwapAndBridgeOptimismRouter is Ownable {
+    using CurrencyLibrary for Currency;
+    using CurrencySettler for Currency;
+    using TransientStateLibrary for IPoolManager;
+
+    IPoolManager public immutable manager;
+    IL1StandardBridge public immutable l1StandardBridge;
+
+
+  constructor(
+        IPoolManager _manager,
+        IL1StandardBridge _l1StandardBridge
+    ) Ownable(msg.sender) {
+        manager = _manager;
+        l1StandardBridge = _l1StandardBridge;
+    }
+}
