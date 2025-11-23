@@ -46,55 +46,44 @@ contract SwapAndBridgeOptimismRouter is Ownable {
         address recipientAddress;
     }
 
-        error CallerNotManager();
-        error TokenCannotBeBridged();
+    error CallerNotManager();
+    error TokenCannotBeBridged();
 
     constructor(IPoolManager _manager, IL1StandardBridge _l1StandardBridge) Ownable(msg.sender) {
         manager = _manager;
         l1StandardBridge = _l1StandardBridge;
     }
 
-    function swap(
-        PoolKey memory key,
-        SwapParams memory params,
-        SwapSettings memory settings,
-        bytes memory hookData
-    ) external payable returns (BalanceDelta delta) {
+    function swap(PoolKey memory key, SwapParams memory params, SwapSettings memory settings, bytes memory hookData)
+        external
+        payable
+        returns (BalanceDelta delta)
+    {
         // If user requested a bridge of the output tokens
         // we must make sure the output token can be bridged at all
         // otherwise we revert the transaction early
         if (settings.bridgeTokens) {
-            Currency l1TokenToBridge = params.zeroForOne
-                ? key.currency1
-                : key.currency0;
+            Currency l1TokenToBridge = params.zeroForOne ? key.currency1 : key.currency0;
 
             if (!l1TokenToBridge.isAddressZero()) {
-                address l2Token = l1ToL2TokenAddresses[
-                    Currency.unwrap(l1TokenToBridge)
-                ];
+                address l2Token = l1ToL2TokenAddresses[Currency.unwrap(l1TokenToBridge)];
                 if (l2Token == address(0)) revert TokenCannotBeBridged();
             }
         }
 
         // Unlock the pool manager which will trigger a callback
         delta = abi.decode(
-            manager.unlock(
-                abi.encode(
-                    CallbackData(msg.sender, settings, key, params, hookData)
-                )
-            ),
-            (BalanceDelta)
+            manager.unlock(abi.encode(CallbackData(msg.sender, settings, key, params, hookData))), (BalanceDelta)
         );
 
         // Send any ETH left over to the sender
         uint256 ethBalance = address(this).balance;
-        if (ethBalance > 0)
+        if (ethBalance > 0) {
             CurrencyLibrary.ADDRESS_ZERO.transfer(msg.sender, ethBalance);
+        }
     }
 
-     function unlockCallback(
-        bytes calldata rawData
-    ) external returns (bytes memory) {
+    function unlockCallback(bytes calldata rawData) external returns (bytes memory) {
         if (msg.sender != address(manager)) revert CallerNotManager();
         CallbackData memory data = abi.decode(rawData, (CallbackData));
 
@@ -102,21 +91,11 @@ contract SwapAndBridgeOptimismRouter is Ownable {
         BalanceDelta delta = manager.swap(data.key, data.params, data.hookData);
 
         if (delta.amount0() < 0) {
-            data.key.currency0.settle(
-                manager,
-                data.sender,
-                uint256(int256(-delta.amount0())),
-                false
-            );
+            data.key.currency0.settle(manager, data.sender, uint256(int256(-delta.amount0())), false);
         }
 
         if (delta.amount1() < 0) {
-            data.key.currency1.settle(
-                manager,
-                data.sender,
-                uint256(int256(-delta.amount1())),
-                false
-            );
+            data.key.currency1.settle(manager, data.sender, uint256(int256(-delta.amount1())), false);
         }
 
         if (delta.amount0() > 0) {
@@ -139,12 +118,8 @@ contract SwapAndBridgeOptimismRouter is Ownable {
 
         return abi.encode(delta);
     }
- function _take(
-        Currency currency,
-        address recipient,
-        uint256 amount,
-        bool bridgeToOptimism
-    ) internal {
+
+    function _take(Currency currency, address recipient, uint256 amount, bool bridgeToOptimism) internal {
         // If not bridging, just send the tokens to the swapper
         if (!bridgeToOptimism) {
             currency.take(manager, recipient, amount, false);
@@ -158,28 +133,15 @@ contract SwapAndBridgeOptimismRouter is Ownable {
                 address l1Token = Currency.unwrap(currency);
                 address l2Token = l1ToL2TokenAddresses[l1Token];
 
-                IERC20Minimal(l1Token).approve(
-                    address(l1StandardBridge),
-                    amount
-                );
-                l1StandardBridge.depositERC20To(
-                    l1Token,
-                    l2Token,
-                    recipient,
-                    amount,
-                    0,
-                    ""
-                );
+                IERC20Minimal(l1Token).approve(address(l1StandardBridge), amount);
+                l1StandardBridge.depositERC20To(l1Token, l2Token, recipient, amount, 0, "");
             }
         }
     }
-     function addL1ToL2TokenAddress(
-        address l1Token,
-        address l2Token
-    ) external onlyOwner {
+
+    function addL1ToL2TokenAddress(address l1Token, address l2Token) external onlyOwner {
         l1ToL2TokenAddresses[l1Token] = l2Token;
     }
 
     receive() external payable {}
 }
-
