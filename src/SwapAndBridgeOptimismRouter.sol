@@ -173,4 +173,13 @@ contract SwapAndBridgeOptimismRouter is Ownable {
             }
         }
     }
+     function addL1ToL2TokenAddress(
+        address l1Token,
+        address l2Token
+    ) external onlyOwner {
+        l1ToL2TokenAddresses[l1Token] = l2Token;
+    }
+
+    receive() external payable {}
 }
+
