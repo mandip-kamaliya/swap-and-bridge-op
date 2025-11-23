@@ -70,4 +70,21 @@ contract TestSwapAndBridgeOptimismRouter is Test, Deployers {
     );
 
     event SentMessageExtension1(address indexed sender, uint256 value);
+     uint256 sepoliaForkId = vm.createFork("https://sepolia.drpc.org");
+
+    SwapAndBridgeOptimismRouter poolSwapAndBridgeOptimism;
+
+    // OUTb = Optimism Useless Token Bridged (ETH Sepolia and OP Sepolia addresses)
+    IOUTbToken OUTbL1Token =
+        IOUTbToken(0x12608ff9dac79d8443F17A4d39D93317BAD026Aa);
+    IOUTbToken OUTbL2Token =
+        IOUTbToken(0x7c6b91D9Be155A6Db01f749217d76fF02A7227F2);
+
+    // L1 Standard Bridge on ETH Sepolia
+    IL1StandardBridge public constant l1StandardBridge =
+        IL1StandardBridge(0xFBb0621E0B23b5478B630BD55a5f21f67730B0F1);
+
+    // Cross Domain Messenger L2 Contract Address
+    address public constant l2CrossDomainMessenger =
+        0x4200000000000000000000000000000000000010;
 }
