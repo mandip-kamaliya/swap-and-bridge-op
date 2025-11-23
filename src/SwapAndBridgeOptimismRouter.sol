@@ -46,8 +46,49 @@ contract SwapAndBridgeOptimismRouter is Ownable {
         address recipientAddress;
     }
 
+        error CallerNotManager();
+        error TokenCannotBeBridged();
+
     constructor(IPoolManager _manager, IL1StandardBridge _l1StandardBridge) Ownable(msg.sender) {
         manager = _manager;
         l1StandardBridge = _l1StandardBridge;
+    }
+
+    function swap(
+        PoolKey memory key,
+        SwapParams memory params,
+        SwapSettings memory settings,
+        bytes memory hookData
+    ) external payable returns (BalanceDelta delta) {
+        // If user requested a bridge of the output tokens
+        // we must make sure the output token can be bridged at all
+        // otherwise we revert the transaction early
+        if (settings.bridgeTokens) {
+            Currency l1TokenToBridge = params.zeroForOne
+                ? key.currency1
+                : key.currency0;
+
+            if (!l1TokenToBridge.isAddressZero()) {
+                address l2Token = l1ToL2TokenAddresses[
+                    Currency.unwrap(l1TokenToBridge)
+                ];
+                if (l2Token == address(0)) revert TokenCannotBeBridged();
+            }
+        }
+
+        // Unlock the pool manager which will trigger a callback
+        delta = abi.decode(
+            manager.unlock(
+                abi.encode(
+                    CallbackData(msg.sender, settings, key, params, hookData)
+                )
+            ),
+            (BalanceDelta)
+        );
+
+        // Send any ETH left over to the sender
+        uint256 ethBalance = address(this).balance;
+        if (ethBalance > 0)
+            CurrencyLibrary.ADDRESS_ZERO.transfer(msg.sender, ethBalance);
     }
 }
