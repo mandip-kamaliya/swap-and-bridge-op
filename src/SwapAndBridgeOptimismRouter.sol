@@ -139,5 +139,38 @@ contract SwapAndBridgeOptimismRouter is Ownable {
 
         return abi.encode(delta);
     }
+ function _take(
+        Currency currency,
+        address recipient,
+        uint256 amount,
+        bool bridgeToOptimism
+    ) internal {
+        // If not bridging, just send the tokens to the swapper
+        if (!bridgeToOptimism) {
+            currency.take(manager, recipient, amount, false);
+        } else {
+            // If we are bridging, take tokens to the router and then bridge to the recipient address on the L2
+            currency.take(manager, address(this), amount, false);
 
+            if (currency.isAddressZero()) {
+                l1StandardBridge.depositETHTo{value: amount}(recipient, 0, "");
+            } else {
+                address l1Token = Currency.unwrap(currency);
+                address l2Token = l1ToL2TokenAddresses[l1Token];
+
+                IERC20Minimal(l1Token).approve(
+                    address(l1StandardBridge),
+                    amount
+                );
+                l1StandardBridge.depositERC20To(
+                    l1Token,
+                    l2Token,
+                    recipient,
+                    amount,
+                    0,
+                    ""
+                );
+            }
+        }
+    }
 }
