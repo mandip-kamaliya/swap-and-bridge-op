@@ -20,3 +20,54 @@ interface IOUTbToken {
     function balanceOf(address account) external view returns (uint256);
     function faucet() external;
 }
+contract TestSwapAndBridgeOptimismRouter is Test, Deployers {
+    using CurrencyLibrary for Currency;
+    using PoolIdLibrary for PoolKey;
+
+    /*//////////////////////////////////////////////////////////////
+                                 EVENTS
+    These are events from L1StandardBridge and CrossDomainMessenger
+    //////////////////////////////////////////////////////////////*/
+
+    event ETHDepositInitiated(
+        address indexed from,
+        address indexed to,
+        uint256 amount,
+        bytes extraData
+    );
+
+    event ERC20DepositInitiated(
+        address indexed l1Token,
+        address indexed l2Token,
+        address indexed from,
+        address to,
+        uint256 amount,
+        bytes extraData
+    );
+
+    event ETHBridgeInitiated(
+        address indexed from,
+        address indexed to,
+        uint256 amount,
+        bytes extraData
+    );
+
+    event ERC20BridgeInitiated(
+        address indexed localToken,
+        address indexed remoteToken,
+        address indexed from,
+        address to,
+        uint256 amount,
+        bytes extraData
+    );
+
+    event SentMessage(
+        address indexed target,
+        address sender,
+        bytes message,
+        uint256 messageNonce,
+        uint256 gasLimit
+    );
+
+    event SentMessageExtension1(address indexed sender, uint256 value);
+}
